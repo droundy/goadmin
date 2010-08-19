@@ -2,10 +2,14 @@ package crypt
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
+	"hash"
+	"encoding/binary"
 	"crypto/block"
 	"crypto/aes"
 	"crypto/rand"
+	"crypto/sha256"
 )
 
 func CreateNewKey() (key string, e os.Error) {
@@ -14,21 +18,79 @@ func CreateNewKey() (key string, e os.Error) {
 	return string(k), e
 }
 
-func Decrypt(key string, rin io.Reader) (r io.Reader, e os.Error) {
-	c, e := simpleCipher(key)
-	iv := make([]byte, 16)
-	n, e := rin.Read(iv) // read the iv first (it's not encrypted)
-	if e != nil {
-		return
+type hashReader struct {
+	r io.Reader
+  h hash.Hash
+	togo int64
+}
+func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
+	if hr.togo <= 0 {
+		return 0, os.EOF
 	}
-	if n != 16 {
-		return r, os.NewError("Short read!");
+	if int64(len(data)) > hr.togo {
+		data = data[0:int(hr.togo)]
+		read, e = hr.r.Read(data)
+		hr.h.Write(data[0:read])
+		if e != nil { return }
+		e = os.EOF
+	} else {
+		read, e = hr.r.Read(data)
+		hr.h.Write(data[0:read])
+		if e != nil {
+			return
+		}
 	}
-	r = block.NewCBCDecrypter(c, iv, rin)
+	hr.togo -= int64(read)
+	if hr.togo == 0 {
+		hsum := hr.h.Sum()
+		csum := make([]byte, len(hsum))
+		clen, enew := hr.r.Read(csum)
+		if enew != nil { return read, enew }
+		for clen < len(csum) {
+			len2, enew := hr.r.Read(csum[clen:])
+			if enew != nil { return read, enew }
+			clen += len2
+		}
+		if string(hsum) != string(csum) {
+			ioutil.WriteFile("/tmp/hsum", hsum, 0644)
+			ioutil.WriteFile("/tmp/csum", csum, 0644)
+			return read, os.NewError("Checksum mismatch!")
+		}
+	}
 	return
 }
 
-func Encrypt(key string, win io.Writer) (w io.Writer, e os.Error) {
+func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, e os.Error) {
+	c, e := simpleCipher(key)
+	iv := make([]byte, 16)
+	_, e = rin.Read(iv) // read the iv first (it's not encrypted)
+	if e != nil {
+		return
+	}
+	r = block.NewCBCDecrypter(c, iv, rin)
+	e = binary.Read(r, binary.LittleEndian, &length)
+	if e != nil { return }
+	return &hashReader{r, sha256.New(), length}, length, nil
+}
+
+type hashWriter struct {
+  w io.Writer
+	h hash.Hash
+	togo int64
+}
+func (hw *hashWriter) Write(data []byte) (written int, e os.Error) {
+	hw.h.Write(data)
+	written, e = hw.w.Write(data)
+	if e != nil { return }
+	hw.togo -= int64(len(data))
+	if hw.togo <= 0 {
+		hw.w.Write(hw.h.Sum())
+		hw.w.Write([]byte("a bit more padding here..."))
+	}
+	return
+}
+
+func Encrypt(key string, win io.Writer, length int64) (w io.Writer, e os.Error) {
 	c, e := simpleCipher(key)
 	if e != nil {
 		return
@@ -40,7 +102,8 @@ func Encrypt(key string, win io.Writer) (w io.Writer, e os.Error) {
 	}
 	win.Write(iv) // pass the iv across first
 	w = block.NewCBCEncrypter(c, iv, win)
-	return
+	binary.Write(w, binary.LittleEndian, length)
+	return &hashWriter{w, sha256.New(), length}, nil
 }
 
 func simpleCipher(key string) (block.Cipher, os.Error) {

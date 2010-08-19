@@ -5,7 +5,6 @@ import (
 	"os"
 	"io"
 	"io/ioutil"
-	"encoding/binary"
 	"github.com/droundy/goadmin/ago"
 	"github.com/droundy/goadmin/crypt"
 	"github.com/droundy/goopt"
@@ -47,15 +46,12 @@ func main() {
 	if err != nil { return }
 	enc0,err := os.Open(*outname+".encrypted", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
 	if err != nil { return }
-	enc, err := crypt.Encrypt(key, enc0)
-	if err != nil { return }
-	err = binary.Write(enc, binary.LittleEndian, fi.Size) // First store the file size
+	enc, err := crypt.Encrypt(key, enc0, fi.Size)
 	if err != nil { return }
 	plain,err := os.Open(*outname, os.O_RDONLY, 0644)
 	if err != nil { return }
 	_, err = io.Copyn(enc, plain, fi.Size)
 	if err != nil { return }
-	io.WriteString(enc,"this is just some padding, only a few dozen bytes.\n");
 }
 
 func makeSource(name string) (err os.Error) {
@@ -77,7 +73,6 @@ import (
     "fmt"
     "os"
     "io"
-    "encoding/binary"
     "github.com/droundy/goopt"
     "github.com/droundy/goadmin/crypt"
 )
@@ -104,13 +99,11 @@ func init() {
         plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
         if err != nil { return }
 	      defer plain.Close()
-        enc, err := crypt.Decrypt(ourkey, enc0)
-        if err != nil { return }
-        var mylen int64
-        err = binary.Read(enc, binary.LittleEndian, &mylen) // First read the file size
+        enc, mylen, err := crypt.Decrypt(ourkey, enc0)
         if err != nil { return }
         _, err = io.Copyn(plain, enc, mylen)
         if err != nil { return }
+        fmt.Println("I have decrypted it.")
         os.Exit(0)
         return
     }
