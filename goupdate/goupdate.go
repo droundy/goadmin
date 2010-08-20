@@ -77,6 +77,7 @@ import (
     "os"
     "exec"
     "io"
+    "http"
     "github.com/droundy/goopt"
     "github.com/droundy/goadmin/crypt"
 )
@@ -128,8 +129,21 @@ func init() {
         fmt.Println("I am trying to update from", source+".encrypted")
         outname,err := exec.LookPath(os.Args[0])
         exiton(err)
-        enc0,err := os.Open(source+".encrypted", os.O_RDONLY, 0755)
-        exiton(err)
+        var enc0 io.Reader
+        isurl := false
+        for _,c := range source {
+            // This is a hokey way to check for URLs vs. local files.
+            isurl = isurl || (c == ':')
+        }
+        if isurl {
+            r, _, err := http.Get(source+".encrypted")
+            exiton(err)
+            enc0 = r.Body
+            defer r.Body.Close()
+        } else {
+            enc0,err = os.Open(source+".encrypted", os.O_RDONLY, 0755)
+            exiton(err)
+        }
         //fmt.Println("I have opened for reading", source+".encrypted")
         err = os.Rename(outname, outname+".old")
         //fmt.Println("I have renamed", outname)
