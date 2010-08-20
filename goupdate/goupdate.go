@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"io"
 	"io/ioutil"
 	"github.com/droundy/goadmin/ago"
@@ -10,14 +11,16 @@ import (
 	"github.com/droundy/goopt"
 )
 
-var urlbase = goopt.String([]string{"--url"},
-	"", "the base of the URL to download from")
+var urlbase = goopt.String([]string{"--url"}, "", "the base of the URL to download from")
 
-var outname = goopt.String([]string{"--output"},
-	"FILENAME",	"the name of the output file")
+var outname = goopt.String([]string{"--output"}, "FILENAME",	"the name of the output file")
 
-var keyfile = goopt.String([]string{"--keyfile"},
-	"FILENAME",	"the name of a key file")
+var source = goopt.String([]string{"--source"}, func () string {
+	wd, _ := os.Getwd()
+	return wd
+}(),	"the url where updates will be available")
+
+var keyfile = goopt.String([]string{"--keyfile"}, "FILENAME", "the name of a key file")
 var key = ""
 
 func main() {
@@ -72,12 +75,22 @@ func makeSource(name string) (err os.Error) {
 import (
     "fmt"
     "os"
+    "exec"
     "io"
     "github.com/droundy/goopt"
     "github.com/droundy/goadmin/crypt"
 )
 
-var ourkey = string([]byte{
+func init() {
+    fmt.Println("This is only a test.\n")
+
+    source := "`)
+	if err != nil { return }
+	_, err = io.WriteString(out, path.Join(*source, *outname))
+	if err != nil { return }
+	_, err = io.WriteString(out, `"
+
+    key := string([]byte{
 `)
 	if err != nil { return }
 	for i:=0; i<len(key); i++ {
@@ -87,8 +100,6 @@ var ourkey = string([]byte{
 	_, err = io.WriteString(out, `
 })
 
-func init() {
-    fmt.Println("This is only a test.\n")
     decrypt := func (f string) (err os.Error) {
         outname := "plaintext"
         if f[len(f)-len(".encrypted"):] == ".encrypted" {
@@ -99,7 +110,7 @@ func init() {
         plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
         if err != nil { return }
 	      defer plain.Close()
-        enc, mylen, err := crypt.Decrypt(ourkey, enc0)
+        enc, mylen, err := crypt.Decrypt(key, enc0)
         if err != nil { return }
         _, err = io.Copyn(plain, enc, mylen)
         if err != nil { return }
@@ -107,7 +118,38 @@ func init() {
         os.Exit(0)
         return
     }
+    exiton := func (e os.Error) {
+        if e != nil {
+            fmt.Fprintln(os.Stderr, "Error updating: ", e)
+            os.Exit(1)
+        }
+    }
+    update := func () (err os.Error) {
+        fmt.Println("I am trying to update from", source+".encrypted")
+        outname,err := exec.LookPath(os.Args[0])
+        exiton(err)
+        enc0,err := os.Open(source+".encrypted", os.O_RDONLY, 0755)
+        exiton(err)
+        //fmt.Println("I have opened for reading", source+".encrypted")
+        err = os.Rename(outname, outname+".old")
+        //fmt.Println("I have renamed", outname)
+        plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0755)
+        exiton(err)
+	      defer plain.Close()
+        //fmt.Println("I have opened for writing", outname)
+        enc, mylen, err := crypt.Decrypt(key, enc0)
+        exiton(err)
+        _, err = io.Copyn(plain, enc, mylen)
+        exiton(err)
+        plain.Close()
+        exiton(os.Remove(outname+".old"))
+        //fmt.Println("I am updating...")
+        err = os.Exec(outname, []string{os.Args[0]}, nil)
+        exiton(err)
+        return
+    }
     goopt.ReqArg([]string{"--decrypt"}, "FILENAME", "decrypt a file", decrypt)
+    goopt.NoArg([]string{"--update"}, "update this executable", update)
 }
 `)
 	return

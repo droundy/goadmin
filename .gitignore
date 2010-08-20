@@ -6,5 +6,7 @@ goupdate
 *.encrypted
 example
 example2
+example2hello
+out
 *.new
 *.key
