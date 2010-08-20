@@ -45,6 +45,8 @@ func main() {
 		fmt.Println(e)
 		os.Exit(1)
 	}
+	e = os.Chmod(*outname, 0700) // So noone bad can read the embedded key.
+	if e != nil { return }
 	fi, err := os.Stat(*outname)
 	if err != nil { return }
 	enc0,err := os.Open(*outname+".encrypted", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
@@ -141,13 +143,13 @@ func init() {
             enc0 = r.Body
             defer r.Body.Close()
         } else {
-            enc0,err = os.Open(source+".encrypted", os.O_RDONLY, 0755)
+            enc0,err = os.Open(source+".encrypted", os.O_RDONLY, 0700)
             exiton(err)
         }
         //fmt.Println("I have opened for reading", source+".encrypted")
         err = os.Rename(outname, outname+".old")
         //fmt.Println("I have renamed", outname)
-        plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0755)
+        plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0700)
         exiton(err)
 	      defer plain.Close()
         //fmt.Println("I have opened for writing", outname)

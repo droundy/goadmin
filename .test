@@ -44,7 +44,6 @@ diff example2 example2.new
 
 ./example2hello | grep Hello
 
-echo XXXXXXXXXXXXXXXXXXXXXX
 ./example2hello --update > out
 cat out
 grep Hello out && exit 1
