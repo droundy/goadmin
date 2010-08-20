@@ -3,3 +3,25 @@
 set -ev
 
 make
+
+cd test
+
+../goupdate/goupdate example.go
+
+ls -lrt
+
+./example --help
+
+./example --decrypt example.encrypted
+
+ls -lrt
+
+diff example example.new
+
+../goupdate/goupdate --output=example2 --keyfile example.key example.go
+
+./example --decrypt example2.encrypted
+
+diff example2 example2.new
+
+echo it all passes

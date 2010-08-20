@@ -3,3 +3,8 @@
 *.[568].*
 testing.go
 goupdate
+*.encrypted
+example
+example2
+*.new
+*.key
