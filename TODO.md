@@ -6,9 +6,6 @@
   attacks (i.e. where someone presents an old, buggy version of an
   admin executable).
 
-- Extent apt package to avoid calling `apt-get install` on packages that
-  are already present or remove on those that are not installed.
-
 - Make the dependency framework actually useful, and decide if it
   gains us anything.  The main purpose is to allow modules to
   interact, via variable initializations, so code can be shared

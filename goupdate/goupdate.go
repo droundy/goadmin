@@ -90,8 +90,6 @@ import (
 )
 
 func init() {
-    fmt.Println("This is only a test.\n")
-
     source := "`)
 	if err != nil { return }
 	_, err = io.WriteString(out, path.Join(*source, *outname))

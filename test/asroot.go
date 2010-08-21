@@ -16,5 +16,6 @@ func main() {
 	deps.ExitWith("Error updating", apt.Update())
 	deps.ExitWith("Error upgrading", apt.Upgrade())
 	deps.ExitWith("Error installing", apt.Install("chromium-browser"))
+	deps.ExitWith("Error removing", apt.Remove("xmonad"))
 	apt.AutoClean() // I don't care if this fails!
 }
