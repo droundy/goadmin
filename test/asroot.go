@@ -5,6 +5,7 @@ import (
 	"github.com/droundy/goopt"
 	"github.com/droundy/goadmin/apt"
 	"github.com/droundy/goadmin/deps"
+	"github.com/droundy/goadmin/passwd"
 )
 
 func main() {
@@ -17,5 +18,11 @@ func main() {
 	deps.ExitWith("Error upgrading", apt.Upgrade())
 	deps.ExitWith("Error installing", apt.Install("chromium-browser"))
 	deps.ExitWith("Error removing", apt.Remove("xmonad"))
+
+	for _,u := range passwd.Get() {
+		if len(u.Passwd) > 1 {
+			fmt.Println("User: ", u.Name, u.Passwd, u.Uid, u.Gid, u.Comment, u.Home, u.Shell)
+		}
+	}
 	apt.AutoClean() // I don't care if this fails!
 }
