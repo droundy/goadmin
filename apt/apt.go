@@ -48,6 +48,12 @@ func AutoClean() os.Error {
 	})
 }
 
+func AutoRemove() os.Error {
+	return runapt(func() os.Error {
+		return deps.Exec("apt-get", "autoremove", "-qq")
+	})
+}
+
 func DistUpgrade() os.Error {
 	return runapt(func() os.Error {
 		return deps.Exec("apt-get", "dist-upgrade", "-y", "-q")
