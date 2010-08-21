@@ -152,9 +152,7 @@ func init() {
             exiton(err)
         }
         //fmt.Println("I have opened for reading", source+".encrypted")
-        err = os.Rename(outname, outname+".old")
-        //fmt.Println("I have renamed", outname)
-        plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0700)
+        plain,err := os.Open(outname+".new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0700)
         exiton(err)
 	      defer plain.Close()
         //fmt.Println("I have opened for writing", outname)
@@ -163,10 +161,10 @@ func init() {
         _, err = io.Copyn(plain, enc, mylen)
         exiton(err)
         plain.Close()
-        exiton(os.Remove(outname+".old"))
+        exiton(os.Rename(outname+".new", outname))
+        //fmt.Println("I have renamed", outname)
         //fmt.Println("I am updating...")
-        err = os.Exec(outname, []string{os.Args[0]}, nil)
-        exiton(err)
+        exiton(os.Exec(outname, []string{os.Args[0]}, nil))
         return
     }
     goopt.ReqArg([]string{"--decrypt"}, "FILENAME", "decrypt a file", decrypt)
