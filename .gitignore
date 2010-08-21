@@ -8,5 +8,6 @@ example
 example2
 example2hello
 out
+asroot
 *.new
 *.key

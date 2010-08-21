@@ -1,9 +1,8 @@
 package ago
 
 import (
-	"fmt"
 	"os"
-	"exec"
+	"github.com/droundy/goadmin/deps"
 )
 
 func panicon(err os.Error) {
@@ -33,27 +32,7 @@ func Compile(outname string, files []string) (e os.Error) {
 	for i,f := range files {
 		args[i+2] = f
 	}
-	e = justrun(archnum()+"g", args)
+	e = deps.Execs(archnum()+"g", args)
 	if e != nil { return }
-	return justrun(archnum()+"l", []string{"-o", outname, objname})
-}
-
-func justrun(cmd string, args []string) os.Error {
-	abscmd,err := exec.LookPath(cmd)
-	if err != nil { return os.NewError("Couldn't find "+cmd+": "+err.String()) }
-	
-	cmdargs := make([]string, len(args)+1)
-	cmdargs[0] = cmd
-	for i,a := range args {
-		cmdargs[i+1] = a
-	}
-	pid, err := exec.Run(abscmd, cmdargs, nil, "",
-		exec.PassThrough, exec.PassThrough, exec.PassThrough)
-	if err != nil { return err }
-	wmsg,err := pid.Wait(0)
-	if err != nil { return err }
-	if wmsg.ExitStatus() != 0 {
-		return os.NewError(cmd+" exited with status "+fmt.Sprint(wmsg.ExitStatus()))
-	}
-	return nil
+	return deps.Exec(archnum()+"l", "-o", outname, objname)
 }

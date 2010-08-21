@@ -56,4 +56,7 @@ grep Goodbye out
 
 sed -i -e s/Goodbye/Hello/ example.go
 
+# Try compiling a demo that would need to be run as root:
+../goupdate/goupdate asroot.go
+
 echo it all passes
