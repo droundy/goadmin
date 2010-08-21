@@ -29,28 +29,21 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 	}
 	if int64(len(data)) > hr.togo {
 		data = data[0:int(hr.togo)]
-		read, e = hr.r.Read(data)
+		read, e = io.ReadAtLeast(hr.r, data, int(hr.togo))
 		hr.h.Write(data[0:read])
 		if e != nil { return }
 		e = os.EOF
 	} else {
-		read, e = hr.r.Read(data)
-		hr.h.Write(data[0:read])
-		if e != nil {
-			return
-		}
+		read, e = io.ReadAtLeast(hr.r, data, len(data))
+		hr.h.Write(data)
+		if e != nil { return }
 	}
 	hr.togo -= int64(read)
 	if hr.togo == 0 {
 		hsum := hr.h.Sum()
 		csum := make([]byte, len(hsum))
-		clen, enew := hr.r.Read(csum)
+		_, enew := io.ReadAtLeast(hr.r, csum, len(csum))
 		if enew != nil { return read, enew }
-		for clen < len(csum) {
-			len2, enew := hr.r.Read(csum[clen:])
-			if enew != nil { return read, enew }
-			clen += len2
-		}
 		if string(hsum) != string(csum) {
 			ioutil.WriteFile("/tmp/hsum", hsum, 0644)
 			ioutil.WriteFile("/tmp/csum", csum, 0644)
@@ -63,7 +56,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, e os.Error) {
 	c, e := simpleCipher(key)
 	iv := make([]byte, 16)
-	_, e = rin.Read(iv) // read the iv first (it's not encrypted)
+	_, e = io.ReadAtLeast(rin, iv, len(iv)) // read the iv first (it's not encrypted)
 	if e != nil {
 		return
 	}
