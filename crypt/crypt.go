@@ -34,7 +34,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 		if e != nil { return }
 		e = os.EOF
 	} else {
-		read, e = io.ReadAtLeast(hr.r, data, len(data))
+		read, e = io.ReadFull(hr.r, data)
 		hr.h.Write(data)
 		if e != nil { return }
 	}
@@ -42,7 +42,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 	if hr.togo == 0 {
 		hsum := hr.h.Sum()
 		csum := make([]byte, len(hsum))
-		_, enew := io.ReadAtLeast(hr.r, csum, len(csum))
+		_, enew := io.ReadFull(hr.r, csum)
 		if enew != nil { return read, enew }
 		if string(hsum) != string(csum) {
 			ioutil.WriteFile("/tmp/hsum", hsum, 0644)
@@ -56,7 +56,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, e os.Error) {
 	c, e := simpleCipher(key)
 	iv := make([]byte, 16)
-	_, e = io.ReadAtLeast(rin, iv, len(iv)) // read the iv first (it's not encrypted)
+	_, e = io.ReadFull(rin, iv) // read the iv first (it's not encrypted)
 	if e != nil {
 		return
 	}
