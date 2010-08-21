@@ -39,7 +39,6 @@ func main() {
 	}
 	fs[len(goopt.Args)] = "testing.go"
 	makeSource("testing.go")
-	ioutil.WriteFile(*outname+".key", []byte(key), 0600)
 	e := ago.Compile(*outname, fs)
 	if e != nil {
 		fmt.Println(e)
@@ -69,8 +68,14 @@ func makeSource(name string) (err os.Error) {
 		if e != nil { return e }
 		key = string(x)
 	} else {
-		key, err = crypt.CreateNewKey()
-		if err != nil { return }
+		x,e := ioutil.ReadFile(*outname+".key")
+		if e != nil {
+			key, err = crypt.CreateNewKey()
+			if err != nil { return }
+			ioutil.WriteFile(*outname+".key", []byte(key), 0600)
+		} else {
+			key = string(x)
+		}
 	}
 	_, err = io.WriteString(out, `package main
 
