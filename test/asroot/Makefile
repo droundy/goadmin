@@ -3,11 +3,11 @@
 
 include $(GOROOT)/src/Make.$(GOARCH)
 
-asroot: pw.go upgrade.go
+asroot: upgrade.go pw.generated.go file.generated.go
 	../../goupdate/goupdate --output asroot $^
 
-%.go: %.go.go
+%.generated.go: %.go.go
 	../../secretrun/secretrun $< > $@
 
 clean:
-	rm -f *.[568] asroot asroot.encrypted pw.go # Not the key
+	rm -f *.[568] asroot asroot.encrypted *.generated.go # Not the key

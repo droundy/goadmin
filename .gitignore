@@ -2,7 +2,7 @@
 *~
 *.[568].*
 testing.go
-pw.go
+*.generated.go
 goupdate/goupdate
 secretrun/secretrun
 *.encrypted

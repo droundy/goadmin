@@ -7,6 +7,7 @@ all:
 	cd deps; make install
 	cd ago; make install
 	cd passwd; make install
+	cd file; make install
 	cd apt; make install
 	cd ago; make install
 	cd goupdate; make
@@ -17,6 +18,7 @@ clean:
 	cd deps; make clean
 	cd ago; make clean
 	cd passwd; make clean
+	cd file; make clean
 	cd apt; make clean
 	cd goupdate; make clean
 	cd secretrun; make clean
