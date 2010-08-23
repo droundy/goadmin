@@ -26,7 +26,7 @@ func archnum() string {
 
 func Compile(outname string, files []string) (e os.Error) {
 	oldmask := syscall.Umask(0)
-	syscall.Umask(0077) // Turn of read/write/execute priviledges for others
+	syscall.Umask(0077) // Turn off read/write/execute priviledges for others
 	if len(files) < 1 {
 		return os.NewError("go.Compile requires at least one file argument.");
 	}

@@ -123,11 +123,11 @@ func ExecRead(cmd string, args ...string) (out []byte, err os.Error) {
 }
 
 func printexec(cmd string, args []string) {
-	fmt.Print(cmd)
+	fmt.Fprint(os.Stderr, cmd)
 	for _,a := range args {
-		fmt.Print(" ", a)
+		fmt.Fprint(os.Stderr, " ", a)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 }
 
 func Execs(cmd string, args []string) os.Error {

@@ -10,6 +10,7 @@ all:
 	cd apt; make install
 	cd ago; make install
 	cd goupdate; make
+	cd secretrun; make
 
 clean:
 	cd crypt; make clean
@@ -18,4 +19,5 @@ clean:
 	cd passwd; make clean
 	cd apt; make clean
 	cd goupdate; make clean
+	cd secretrun; make clean
 	cd test/asroot; make clean

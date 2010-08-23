@@ -3,7 +3,8 @@
 *.[568].*
 testing.go
 pw.go
-goupdate
+goupdate/goupdate
+secretrun/secretrun
 *.encrypted
 example
 example2
