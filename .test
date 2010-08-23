@@ -18,11 +18,7 @@ ls -lrt
 
 ./example --help
 
-./example --decrypt example.encrypted
-
 ls -lrt
-
-diff example example.new
 
 ../goupdate/goupdate --source=. --output=example2 --keyfile example.key example.go
 mv example2 example2hello
@@ -32,10 +28,6 @@ sed -i -e s/Hello/Goodbye/ example.go
 grep Goodbye example.go
 
 ../goupdate/goupdate --output=example2 --keyfile example.key example.go
-
-./example --decrypt example2.encrypted
-
-diff example2 example2.new
 
 ./example2 | grep Goodbye
 ./example2 | grep Hello && exit 1

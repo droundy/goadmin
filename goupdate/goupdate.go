@@ -6,6 +6,7 @@ import (
 	"path"
 	"io"
 	"io/ioutil"
+  "strconv"
 	"github.com/droundy/goadmin/ago"
 	"github.com/droundy/goadmin/crypt"
 	"github.com/droundy/goopt"
@@ -91,40 +92,16 @@ import (
 )
 
 func main() {
-    source := "`)
+    source := `)
 	if err != nil { return }
-	_, err = io.WriteString(out, path.Join(*source, *outname))
+	_, err = io.WriteString(out, strconv.Quote(path.Join(*source, *outname)))
 	if err != nil { return }
-	_, err = io.WriteString(out, `"
-
-    key := string([]byte{
-`)
-	if err != nil { return }
-	for i:=0; i<len(key); i++ {
-		_, err = fmt.Fprintln(out, "    ", key[i], ",")
-		if err != nil { return }
-	}
 	_, err = io.WriteString(out, `
-})
-
-    decrypt := func (f string) (err os.Error) {
-        outname := "plaintext"
-        if f[len(f)-len(".encrypted"):] == ".encrypted" {
-            outname = f[0:len(f)-len(".encrypted")]+".new"
-        }
-        enc0,err := os.Open(f, os.O_RDONLY, 0644)
-        if err != nil { return }
-        plain,err := os.Open(outname, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
-        if err != nil { return }
-	      defer plain.Close()
-        enc, mylen, err := crypt.Decrypt(key, enc0)
-        if err != nil { return }
-        _, err = io.Copyn(plain, enc, mylen)
-        if err != nil { return }
-        fmt.Println("I have decrypted it.")
-        os.Exit(0)
-        return
-    }
+    key := `)
+	if err != nil { return }
+	_, err = io.WriteString(out, strconv.Quote(key))
+	if err != nil { return }
+	_, err = io.WriteString(out, `
     exiton := func (e os.Error) {
         if e != nil {
             fmt.Fprintln(os.Stderr, "Error updating: ", e)
@@ -166,7 +143,6 @@ func main() {
         exiton(os.Exec(outname, []string{os.Args[0]}, nil))
         return
     }
-    goopt.ReqArg([]string{"--decrypt"}, "FILENAME", "decrypt a file", decrypt)
     goopt.NoArg([]string{"--update"}, "update this executable", update)
 
     // The above is all effectively "init" stuff.
