@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"syscall"
 	"github.com/droundy/goadmin/deps"
 )
 
@@ -24,10 +25,13 @@ func archnum() string {
 }
 
 func Compile(outname string, files []string) (e os.Error) {
+	oldmask := syscall.Umask(0)
+	syscall.Umask(0077) // Turn of read/write/execute priviledges for others
 	if len(files) < 1 {
 		return os.NewError("go.Compile requires at least one file argument.");
 	}
 	objname := "_go_."+archnum()
+	os.Remove(objname) // so umask will have its desired effect
 
 	args := make([]string, len(files) + 2)
 	args[0] = "-o"
@@ -37,7 +41,10 @@ func Compile(outname string, files []string) (e os.Error) {
 	}
 	e = deps.Execs(archnum()+"g", args)
 	if e != nil { return }
-	return deps.Exec(archnum()+"l", "-o", outname, objname)
+	os.Remove(outname) // so umask will have its desired effect
+	retval := deps.Exec(archnum()+"l", "-o", outname, objname)
+	syscall.Umask(oldmask)
+	return retval
 }
 
 var createcodeonce sync.Once

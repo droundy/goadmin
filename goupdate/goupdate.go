@@ -45,7 +45,6 @@ func main() {
 		fmt.Println(e)
 		os.Exit(1)
 	}
-	e = os.Chmod(*outname, 0700) // So noone bad can read the embedded key.
 	if e != nil { return }
 	fi, err := os.Stat(*outname)
 	if err != nil { return }
@@ -60,7 +59,10 @@ func main() {
 }
 
 func makeSource(name string) (err os.Error) {
-	out,err := os.Open(name, os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
+	os.Remove(name) // just in case it already exists and has wrong
+									// permissions (or even is already open by another
+									// process)!
+	out,err := os.Open(name, os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0600) // will contain the key!
 	if err != nil { return }
 	defer out.Close()
 
