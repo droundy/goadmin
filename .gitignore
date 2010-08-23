@@ -13,4 +13,5 @@ out
 test/asroot/asroot
 *.new
 *.key
+*.serial
 _go_*

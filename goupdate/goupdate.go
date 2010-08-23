@@ -23,6 +23,7 @@ var source = goopt.String([]string{"--source"}, func () string {
 
 var keyfile = goopt.String([]string{"--keyfile"}, "FILENAME", "the name of a key file")
 var key = ""
+var sequence int64
 
 func main() {
 	goopt.Parse(func() []string { return []string{} })
@@ -50,7 +51,7 @@ func main() {
 	if err != nil { return }
 	enc0,err := os.Open(*outname+".encrypted", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
 	if err != nil { return }
-	enc, err := crypt.Encrypt(key, enc0, fi.Size)
+	enc, err := crypt.Encrypt(key, enc0, fi.Size, sequence)
 	if err != nil { return }
 	plain,err := os.Open(*outname, os.O_RDONLY, 0644)
 	if err != nil { return }
@@ -66,10 +67,16 @@ func makeSource(name string) (err os.Error) {
 	if err != nil { return }
 	defer out.Close()
 
+	serialfile := *outname+".serial"
 	if *keyfile != "FILENAME" {
 		x,e := ioutil.ReadFile(*keyfile)
 		if e != nil { return e }
 		key = string(x)
+		if len(*keyfile) > 4 && (*keyfile)[len(*keyfile)-4:] == ".key" {
+			serialfile = (*keyfile)[0:len(*keyfile)-4] + ".serial"
+		} else {
+			serialfile = *keyfile + ".serial"
+		}
 	} else {
 		x,e := ioutil.ReadFile(*outname+".key")
 		if e != nil {
@@ -80,6 +87,23 @@ func makeSource(name string) (err os.Error) {
 			key = string(x)
 		}
 	}
+	x,e := ioutil.ReadFile(serialfile)
+	if e == nil {
+		// I don't particularly care if it doesn't exist, or if I have
+		// trouble reading it...
+		sequence, e = strconv.Atoi64(string(x))
+		if e != nil {
+			fmt.Println("Couldn't parse file", serialfile, "so starting at serial number 1")
+			fmt.Println("File looks like: ", strconv.Quote(string(x)))
+		} else {
+			fmt.Println("Storing new serial number", sequence+1, "in file", serialfile)
+		}
+	} else {
+		fmt.Println("No file", serialfile, "so starting at serial number 1")
+	}
+	sequence++;
+	e = ioutil.WriteFile(serialfile, []byte(fmt.Sprint(sequence)), 0600)
+	if e != nil { return e }
 	_, err = io.WriteString(out, `package main
 
 import (
@@ -102,6 +126,11 @@ func main() {
     key := `)
 	if err != nil { return }
 	_, err = io.WriteString(out, strconv.Quote(key))
+	if err != nil { return }
+	_, err = io.WriteString(out, `
+    var serialnum int64 = `)
+	if err != nil { return }
+	_, err = io.WriteString(out, strconv.Itoa64(sequence))
 	if err != nil { return }
 	_, err = io.WriteString(out, `
     exiton := func (e os.Error) {
@@ -130,19 +159,25 @@ func main() {
             exiton(err)
         }
         //fmt.Println("I have opened for reading", source+".encrypted")
-        plain,err := os.Open(outname+".new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0700)
+        enc, mylen, newserialnum, err := crypt.Decrypt(key, enc0)
         exiton(err)
-	      defer plain.Close()
-        //fmt.Println("I have opened for writing", outname)
-        enc, mylen, err := crypt.Decrypt(key, enc0)
-        exiton(err)
-        _, err = io.Copyn(plain, enc, mylen)
-        exiton(err)
-        plain.Close()
-        exiton(os.Rename(outname+".new", outname))
-        //fmt.Println("I have renamed", outname)
-        //fmt.Println("I am updating...")
-        exiton(os.Exec(outname, []string{os.Args[0]}, nil))
+        if newserialnum <= serialnum {
+          fmt.Println("New executable is same as the current one.")
+        } else if newserialnum < serialnum {
+          fmt.Println("New executable is older than the current one.")
+        } else {
+          plain,err := os.Open(outname+".new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0700)
+          exiton(err)
+	        defer plain.Close()
+          //fmt.Println("I have opened for writing", outname)
+          _, err = io.Copyn(plain, enc, mylen)
+          exiton(err)
+          plain.Close()
+          exiton(os.Rename(outname+".new", outname))
+          //fmt.Println("I have renamed", outname)
+          //fmt.Println("I am updating...")
+          exiton(os.Exec(outname, []string{os.Args[0]}, nil))
+        }
         return
     }
     goopt.NoArg([]string{"--update"}, "update this executable", update)

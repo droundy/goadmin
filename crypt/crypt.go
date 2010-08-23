@@ -53,7 +53,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 	return
 }
 
-func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, e os.Error) {
+func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, sequence int64, e os.Error) {
 	c, e := simpleCipher(key)
 	iv := make([]byte, 16)
 	_, e = io.ReadFull(rin, iv) // read the iv first (it's not encrypted)
@@ -63,7 +63,9 @@ func Decrypt(key string, rin io.Reader) (r io.Reader, length int64, e os.Error) 
 	r = block.NewCBCDecrypter(c, iv, rin)
 	e = binary.Read(r, binary.LittleEndian, &length)
 	if e != nil { return }
-	return &hashReader{r, sha256.New(), length}, length, nil
+	e = binary.Read(r, binary.LittleEndian, &sequence)
+	if e != nil { return }
+	return &hashReader{r, sha256.New(), length}, length, sequence, nil
 }
 
 type hashWriter struct {
@@ -83,7 +85,7 @@ func (hw *hashWriter) Write(data []byte) (written int, e os.Error) {
 	return
 }
 
-func Encrypt(key string, win io.Writer, length int64) (w io.Writer, e os.Error) {
+func Encrypt(key string, win io.Writer, length, sequence int64) (w io.Writer, e os.Error) {
 	c, e := simpleCipher(key)
 	if e != nil {
 		return
@@ -96,6 +98,7 @@ func Encrypt(key string, win io.Writer, length int64) (w io.Writer, e os.Error) 
 	win.Write(iv) // pass the iv across first
 	w = block.NewCBCEncrypter(c, iv, win)
 	binary.Write(w, binary.LittleEndian, length)
+	binary.Write(w, binary.LittleEndian, sequence)
 	return &hashWriter{w, sha256.New(), length}, nil
 }
 

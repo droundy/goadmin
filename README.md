@@ -44,8 +44,11 @@ the program will grab the new version, replace itself, and exec it.
 Note that since only symmetric encryption is used, if someone bad gets
 a copy of the unencrypted `your-admin-code`, that someone has access
 to the key and can impersonate the server to that client or any other
-that shares the same key.  I plan on adding signing with a public key
-as well as a serial number to prevent replay attacks.
+that shares the same key.  I plan on adding signing with a public key.
+
+Goadmin also tracks serial numbers of executables, to get around
+replay attacks (i.e. where someone presents an old, possibly buggy
+version of an admin executable).
 
 Why?
 ----
