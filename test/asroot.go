@@ -17,12 +17,11 @@ func main() {
 	deps.ExitWith("Error updating", apt.Update())
 	deps.ExitWith("Error upgrading", apt.Upgrade())
 	deps.ExitWith("Error installing", apt.Install("chromium-browser"))
+	deps.ExitWith("Error installing", apt.Install("finger"))
 	deps.ExitWith("Error removing", apt.Remove("xmonad"))
 
-	for _,u := range passwd.Get() {
-		if len(u.Passwd) > 1 {
-			fmt.Println("User: ", u.Name, u.Passwd, u.Uid, u.Gid, u.Comment, u.Home, u.Shell)
-		}
-	}
+	u := passwd.Get()["droundy"]
+	u.Gid = 100
+	u.Set(passwd.All)
 	apt.AutoClean() // I don't care if this fails!
 }
