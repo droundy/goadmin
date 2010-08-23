@@ -56,7 +56,11 @@ grep Goodbye out
 
 sed -i -e s/Goodbye/Hello/ example.go
 
+../goupdate/goupdate --output temp pw.go.go
+./temp > pw.go
+rm -f temp
+
 # Try compiling a demo that would need to be run as root:
-../goupdate/goupdate asroot.go
+../goupdate/goupdate asroot.go pw.go
 
 echo it all passes

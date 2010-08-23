@@ -2,6 +2,9 @@ package ago
 
 import (
 	"os"
+	"fmt"
+	"strconv"
+	"sync"
 	"github.com/droundy/goadmin/deps"
 )
 
@@ -35,4 +38,79 @@ func Compile(outname string, files []string) (e os.Error) {
 	e = deps.Execs(archnum()+"g", args)
 	if e != nil { return }
 	return deps.Exec(archnum()+"l", "-o", outname, objname)
+}
+
+var createcodeonce sync.Once
+var imports = make(chan string)
+var code = make(chan string)
+var done = make(chan string)
+var errr = make(chan os.Error)
+
+func init() {
+	go func () {
+		imps := make(map[string]bool)
+		imps["github.com/droundy/goadmin/deps"] = true
+		allcode := ""
+		for {
+			select {
+			case i := <- imports:
+				imps[i] = true
+			case c := <- code:
+				allcode = allcode + "\n\t" + c
+			case varname := <- done:
+				_,e := fmt.Print(`package main
+
+import (
+`)
+				if e != nil {
+					fmt.Println(e)
+					errr <- e
+					return
+				}
+				for i := range imps {
+					_, e = fmt.Print("\t", strconv.Quote(i), "\n")
+					if e != nil {
+						fmt.Println(e)
+						errr <- e
+						return
+					}
+				}
+				_, e = fmt.Print(`)
+
+var `, varname, ` = deps.Run(func () (e deps.Error) {`)
+				if e != nil {
+					fmt.Println(e)
+					errr <- e
+					return
+				}
+				_, e = fmt.Println(allcode)
+				if e != nil {
+					fmt.Println(e)
+					errr <- e
+					return
+				}
+				_, e = fmt.Println("\treturn\n})")
+				if e != nil {
+					fmt.Println(e)
+					errr <- e
+					return
+				}
+				errr <- e
+				return
+			}
+		}
+	}()
+}
+
+func Import(i string) {
+	imports <- i
+}
+
+func Code(c string) {
+	code <- c
+}
+
+func Print(varname string) os.Error {
+	done <- varname
+	return <- errr
 }

@@ -2,6 +2,7 @@
 *~
 *.[568].*
 testing.go
+pw.go
 goupdate
 *.encrypted
 example

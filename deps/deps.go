@@ -23,11 +23,34 @@ func ExitWith(m string, e os.Error) {
   }
 }
 
-type Job <-chan Error
+var alljobs = make([]Job, 0, 12)
+func init() {
+	go func() {
+		// collect all the jobs and wait for them to finish
+		for {
+			x := <- reportjob
+			if len(alljobs) == cap(alljobs) {
+				n := make([]Job, len(alljobs), 2*cap(alljobs))
+				for i,j := range alljobs {
+					n[i] = j
+				}
+				alljobs = n
+			}
+			alljobs = alljobs[0:len(alljobs)+1]
+			alljobs[len(alljobs)-1] = x
+		}
+	}()
+}
 
-func WaitFor(js ...Job) os.Error {
+//type Job <-chan Error
+type Job struct {
+	Ch <-chan Error
+}
+var reportjob = make(chan Job)
+
+func waitFors(js []Job) os.Error {
 	for _,j := range js {
-		e := <- j
+		e := <- j.Ch
 		if e != nil {
 			return e // Quit early with error.
 		}
@@ -35,11 +58,19 @@ func WaitFor(js ...Job) os.Error {
 	return nil
 }
 
+func WaitFor(js ...Job) os.Error {
+	return waitFors(js)
+}
+
+func Done() os.Error {
+	return waitFors(alljobs)
+}
+
 func Run(f func () Error, js ...Job) Job {
 	ch := make(chan Error)
 	go func () {
 		for _,j := range js {
-			e := <- j
+			e := <- j.Ch
 			if e != nil {
 				for {
 					ch <- e // This is a very hokey way of broadcasting...
@@ -51,7 +82,9 @@ func Run(f func () Error, js ...Job) Job {
 			ch <- e // This is a very hokey way of broadcasting...
 		}
 	}()
-	return Job(ch)
+	j := Job{ch}
+	go func() { reportjob <- j }()
+	return j
 }
 
 func ExecRead(cmd string, args ...string) (out []byte, err os.Error) {

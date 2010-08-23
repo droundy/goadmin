@@ -1,11 +1,12 @@
 package main
 
+// hello world
+
 import (
 	"fmt"
 	"github.com/droundy/goopt"
 	"github.com/droundy/goadmin/apt"
 	"github.com/droundy/goadmin/deps"
-	"github.com/droundy/goadmin/passwd"
 )
 
 func main() {
@@ -20,8 +21,7 @@ func main() {
 	deps.ExitWith("Error installing", apt.Install("finger"))
 	deps.ExitWith("Error removing", apt.Remove("xmonad"))
 
-	u := passwd.Get()["droundy"]
-	u.Gid = 100
-	u.Set(passwd.All)
 	apt.AutoClean() // I don't care if this fails!
+
+	deps.Done()
 }

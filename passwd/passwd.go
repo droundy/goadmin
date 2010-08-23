@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sync"
 	"strconv"
+	"github.com/droundy/goadmin/ago"
 )
 
 type Field int
@@ -28,6 +29,7 @@ type User struct {
 	Comment, Home, Shell string
 }
 
+var havepasswords = false
 var passwd = make(map[string]User)
 var created = make(map[string]User)
 var once sync.Once
@@ -67,12 +69,33 @@ func Get() map[string]User {
 						passwd[username] = us
 					}
 				}
+				havepasswords = true
 			} else {
-				fmt.Println("Unable to read /etc/shadow.")
+				fmt.Fprintln(os.Stderr, "Unable to read /etc/shadow.")
 			}
 		}
 	})
 	return passwd
+}
+
+func (u User) MakeCodeToSet(f Field) {
+	if !havepasswords && f & Passwd != 0 {
+		fmt.Fprintln(os.Stderr, "Refusing to set password for",u.Name,", since we can't read /etc/shadow!")
+		f = f ^ Passwd // Don't set password if we can't read /etc/shadow!
+	}
+	if f == 0 { return } // Nothing to set!
+	ago.Import("github.com/droundy/goadmin/passwd")
+	code := "e = passwd.User{"+strconv.Quote(u.Name)+","
+	if Passwd & f != 0 {
+		code += strconv.Quote(u.Passwd) + ","
+	} else {
+		code += `"",`
+	}
+	code += fmt.Sprint(u.Uid, ",", u.Gid, ",")
+	code += fmt.Sprint(strconv.Quote(u.Comment), ",", strconv.Quote(u.Home), ",", strconv.Quote(u.Shell))
+	code += fmt.Sprint("}.Set(", f, ")")
+	code += fmt.Sprint("\n\tif e != nil { return }")
+	ago.Code(code)
 }
 
 func (u User) Set(f Field) os.Error {
