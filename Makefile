@@ -18,3 +18,4 @@ clean:
 	cd passwd; make clean
 	cd apt; make clean
 	cd goupdate; make clean
+	cd test/asroot; make clean
