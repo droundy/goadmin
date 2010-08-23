@@ -87,9 +87,10 @@ import (
     "http"
     "github.com/droundy/goopt"
     "github.com/droundy/goadmin/crypt"
+    "github.com/droundy/goadmin/deps"
 )
 
-func init() {
+func main() {
     source := "`)
 	if err != nil { return }
 	_, err = io.WriteString(out, path.Join(*source, *outname))
@@ -167,6 +168,10 @@ func init() {
     }
     goopt.ReqArg([]string{"--decrypt"}, "FILENAME", "decrypt a file", decrypt)
     goopt.NoArg([]string{"--update"}, "update this executable", update)
+
+    // The above is all effectively "init" stuff.
+    goopt.Parse(func() []string { return []string{} })
+    deps.Done()
 }
 `)
 	return

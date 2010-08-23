@@ -9,6 +9,7 @@ example
 example2
 example2hello
 out
-asroot
+test/asroot/asroot
 *.new
 *.key
+_go_*

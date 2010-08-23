@@ -3,6 +3,7 @@ package deps
 import (
 	"os"
 	"fmt"
+	"time"
 	"io/ioutil"
 	"exec"
 	"strconv"
@@ -46,6 +47,7 @@ func init() {
 type Job struct {
 	Ch <-chan Error
 }
+var startnow = make(chan struct{})
 var reportjob = make(chan Job)
 
 func waitFors(js []Job) os.Error {
@@ -63,6 +65,14 @@ func WaitFor(js ...Job) os.Error {
 }
 
 func Done() os.Error {
+	go func () {
+		for {
+			startnow <- struct{}{} // Tell everyone to start!  :)
+		}
+	}()
+	// FIXME: the following is potentially racy!
+	time.Sleep(1e9) // sleep for a second, to make sure the goroutines
+									// writing to reportjob have a chance to report.
 	return waitFors(alljobs)
 }
 
@@ -77,6 +87,7 @@ func Run(f func () Error, js ...Job) Job {
 				}
 			}
 		}
+		<- startnow // verify that we should now start...
 		e := f()
 		for {
 			ch <- e // This is a very hokey way of broadcasting...

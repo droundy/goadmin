@@ -2,11 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/droundy/goopt"
+	"github.com/droundy/goadmin/deps"
 )
 
-func main() {
-	goopt.Parse(func() []string { return []string{} })
-
-	fmt.Println("Hello world!")
-}
+var hello = deps.Run(func () deps.Error { fmt.Println("Hello world!"); return nil })
