@@ -6,6 +6,7 @@ import (
 	"os"
 	"hash"
 	"encoding/binary"
+	"compress/flate"
 	"crypto/block"
 	"crypto/aes"
 	"crypto/rand"
@@ -20,7 +21,7 @@ func CreateNewKey() (key string, e os.Error) {
 }
 
 type hashReader struct {
-	r io.Reader
+	r io.ReadCloser
   h hash.Hash
 	publickey *rsa.PublicKey
 	togo int64
@@ -69,6 +70,7 @@ func (hr *hashReader) Read(data []byte) (read int, e os.Error) {
 		}
 		e = verify(hr.publickey, hsum, sig)
 		if e != nil { return read, e }
+		hr.r.Close()
 	}
 	return
 }
@@ -90,22 +92,23 @@ func Decrypt(key string, publickey PublicKey, rin io.Reader) (r io.Reader, lengt
 		e = os.NewError("Trouble reading the iv: "+e.String())
 		return
 	}
-	r = block.NewCBCDecrypter(c, iv, rin)
-	e = binary.Read(r, binary.LittleEndian, &length)
+	rdec := flate.NewReader(block.NewCBCDecrypter(c, iv, rin))
+	e = binary.Read(rdec, binary.LittleEndian, &length)
 	if e != nil {
 		e = os.NewError("Trouble reading the file length: "+e.String())
 		return
 	}
-	e = binary.Read(r, binary.LittleEndian, &sequence)
+	e = binary.Read(rdec, binary.LittleEndian, &sequence)
 	if e != nil {
 		e = os.NewError("Trouble reading the serial number: "+e.String())
 		return
 	}
-	return &hashReader{r, sha256.New(), pub, length}, length, sequence, nil
+	return &hashReader{rdec, sha256.New(), pub, length}, length, sequence, nil
 }
 
 type hashWriter struct {
-  w io.Writer
+  w io.WriteCloser
+	cipher io.Writer
 	h hash.Hash
 	privatekey *rsa.PrivateKey
 	togo int64
@@ -122,7 +125,13 @@ func (hw *hashWriter) Write(data []byte) (written int, e os.Error) {
 		if e != nil { return 0, e }
 		binary.Write(hw.w, binary.LittleEndian, int32(len(sig)))
 		hw.w.Write(sig)
-		hw.w.Write([]byte("a bit more padding here..."))
+		hw.w.Close() // Push everything through to the cipher!
+
+		// Here we send another block worth of data through the cipher to
+		// force it to flush what it's already got.  I'd prefer to just
+		// send a Flush() or a Close(), though.
+		buffer := make([]byte, 16)
+		hw.cipher.Write(buffer)
 	}
 	return
 }
@@ -139,12 +148,13 @@ func Encrypt(key string, privatekey PrivateKey, win io.Writer, length, sequence 
 	}
 	_,e = win.Write(iv) // pass the iv across first
 	if e != nil { return }
-	w = block.NewCBCEncrypter(c, iv, win)
-	e = binary.Write(w, binary.LittleEndian, length)
+	wraw := block.NewCBCEncrypter(c, iv, win)
+	wenc := flate.NewWriter(wraw, flate.BestCompression)
+	e = binary.Write(wenc, binary.LittleEndian, length)
 	if e != nil { return }
-	e = binary.Write(w, binary.LittleEndian, sequence)
+	e = binary.Write(wenc, binary.LittleEndian, sequence)
 	if e != nil { return }
-	return &hashWriter{w, sha256.New(), priv, length}, nil
+	return &hashWriter{wenc, wraw, sha256.New(), priv, length}, nil
 }
 
 func simpleCipher(key string) (block.Cipher, os.Error) {
