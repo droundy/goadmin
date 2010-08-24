@@ -23,6 +23,8 @@ var source = goopt.String([]string{"--source"}, func () string {
 
 var keyfile = goopt.String([]string{"--keyfile"}, "FILENAME", "the name of a key file")
 var key = ""
+var privatekey crypt.PrivateKey
+var publickey crypt.PublicKey
 var sequence int64
 
 func main() {
@@ -51,7 +53,7 @@ func main() {
 	if err != nil { return }
 	enc0,err := os.Open(*outname+".encrypted", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
 	if err != nil { return }
-	enc, err := crypt.Encrypt(key, enc0, fi.Size, sequence)
+	enc, err := crypt.Encrypt(key, privatekey, enc0, fi.Size, sequence)
 	if err != nil { return }
 	plain,err := os.Open(*outname, os.O_RDONLY, 0644)
 	if err != nil { return }
@@ -68,14 +70,20 @@ func makeSource(name string) (err os.Error) {
 	defer out.Close()
 
 	serialfile := *outname+".serial"
+	privatefile := *outname+".private"
+	publicfile := *outname+".public"
 	if *keyfile != "FILENAME" {
 		x,e := ioutil.ReadFile(*keyfile)
 		if e != nil { return e }
 		key = string(x)
 		if len(*keyfile) > 4 && (*keyfile)[len(*keyfile)-4:] == ".key" {
 			serialfile = (*keyfile)[0:len(*keyfile)-4] + ".serial"
+			privatefile = (*keyfile)[0:len(*keyfile)-4] + ".private"
+			publicfile = (*keyfile)[0:len(*keyfile)-4] + ".public"
 		} else {
 			serialfile = *keyfile + ".serial"
+			privatefile = *keyfile + ".private"
+			publicfile = *keyfile + ".public"
 		}
 	} else {
 		x,e := ioutil.ReadFile(*outname+".key")
@@ -87,6 +95,7 @@ func makeSource(name string) (err os.Error) {
 			key = string(x)
 		}
 	}
+	// Read or generate a serial number!
 	x,e := ioutil.ReadFile(serialfile)
 	if e == nil {
 		// I don't particularly care if it doesn't exist, or if I have
@@ -104,6 +113,23 @@ func makeSource(name string) (err os.Error) {
 	sequence++;
 	e = ioutil.WriteFile(serialfile, []byte(fmt.Sprint(sequence)), 0600)
 	if e != nil { return e }
+	// Read or generate a private key!
+	x,e = ioutil.ReadFile(privatefile)
+	y, e2 := ioutil.ReadFile(publicfile)
+	if e == nil && e2 == nil {
+		privatekey = crypt.PrivateKey(x)
+		publickey = crypt.PublicKey(y)
+	} else {
+		fmt.Println("Creating a fresh RSA key pair, this may take some time...")
+		publickey, privatekey, e = crypt.CreateRSAKeyPair()
+		fmt.Println("Writing RSA key pair to disk...")
+		if e != nil { return e }
+		e = ioutil.WriteFile(privatefile, []byte(string(privatekey)), 0600)
+		if e != nil { return e }
+		e = ioutil.WriteFile(publicfile, []byte(string(publickey)), 0600)
+		if e != nil { return e }
+	}
+	// Finally, let's write out the source code using this stuff.
 	_, err = io.WriteString(out, `package main
 
 import (
@@ -128,21 +154,29 @@ func main() {
 	_, err = io.WriteString(out, strconv.Quote(key))
 	if err != nil { return }
 	_, err = io.WriteString(out, `
+    var publickey crypt.PublicKey = `)
+	if err != nil { return }
+	_, err = io.WriteString(out, strconv.Quote(string(publickey)))
+	if err != nil { return }
+	_, err = io.WriteString(out, `
     var serialnum int64 = `)
 	if err != nil { return }
 	_, err = io.WriteString(out, strconv.Itoa64(sequence))
 	if err != nil { return }
 	_, err = io.WriteString(out, `
-    exiton := func (e os.Error) {
+    exitwith := func (x string, e os.Error) {
         if e != nil {
-            fmt.Fprintln(os.Stderr, "Error updating: ", e)
+            fmt.Fprintln(os.Stderr, x, e)
             os.Exit(1)
         }
     }
+    exiton := func (e os.Error) {
+        exitwith("Error updating: ", e)
+    }
     update := func () (err os.Error) {
-        fmt.Println("I am trying to update from", source+".encrypted")
+        fmt.Fprintln(os.Stderr, "I am trying to update from", source+".encrypted")
         outname,err := exec.LookPath(os.Args[0])
-        exiton(err)
+        exitwith("Couldn't find my own binary: ", err)
         var enc0 io.Reader
         isurl := false
         for _,c := range source {
@@ -151,16 +185,16 @@ func main() {
         }
         if isurl {
             r, _, err := http.Get(source+".encrypted")
-            exiton(err)
+            exitwith("Couldn't retrieve encrypted source via http: ", err)
             enc0 = r.Body
             defer r.Body.Close()
         } else {
             enc0,err = os.Open(source+".encrypted", os.O_RDONLY, 0700)
-            exiton(err)
+            exitwith("Couldn't open encrypted file: ", err)
         }
         //fmt.Println("I have opened for reading", source+".encrypted")
-        enc, mylen, newserialnum, err := crypt.Decrypt(key, enc0)
-        exiton(err)
+        enc, mylen, newserialnum, err := crypt.Decrypt(key, publickey, enc0)
+        exitwith("Couldn't decrypt file: ", err)
         if newserialnum <= serialnum {
           fmt.Println("New executable is same as the current one.")
         } else if newserialnum < serialnum {

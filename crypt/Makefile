@@ -6,6 +6,6 @@ include $(GOROOT)/src/Make.$(GOARCH)
 TARG=github.com/droundy/goadmin/crypt
 
 GOFILES=\
-        crypt.go\
+        crypt.go rsa.go \
 
 include $(GOROOT)/src/Make.pkg

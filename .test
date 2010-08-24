@@ -10,6 +10,13 @@ sed -i -e s/Goodbye/Hello/ example.go
 grep Hello example.go
 
 ../goupdate/goupdate example.go
+for ser in *.serial; do
+    echo -n $ser: ' '
+    cat $ser
+    echo
+done
+ls -lh *.encrypted
+test -s example.encrypted
 
 ls -lrt
 
@@ -21,6 +28,10 @@ ls -lrt
 ls -lrt
 
 ../goupdate/goupdate --source=. --output=example2 --keyfile example.key example.go
+for ser in *.serial; do
+    echo $ser:
+    cat $ser
+done
 mv example2 example2hello
 mv example2.encrypted example2hello.encrypted
 
@@ -28,6 +39,10 @@ sed -i -e s/Hello/Goodbye/ example.go
 grep Goodbye example.go
 
 ../goupdate/goupdate --output=example2 --keyfile example.key example.go
+for ser in *.serial; do
+    echo $ser:
+    cat $ser
+done
 
 ./example2 | grep Goodbye
 ./example2 | grep Hello && exit 1
@@ -35,6 +50,8 @@ grep Goodbye example.go
 ./example2 --help
 
 ./example2hello | grep Hello
+
+ls -lh *.encrypted
 
 ./example2hello --update > out
 cat out

@@ -6,12 +6,14 @@ testing.go
 goupdate/goupdate
 secretrun/secretrun
 *.encrypted
+*.public
+*.private
+*.new
+*.key
+*.serial
 example
 example2
 example2hello
 out
 test/asroot/asroot
-*.new
-*.key
-*.serial
 _go_*

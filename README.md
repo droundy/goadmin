@@ -41,14 +41,12 @@ you run
 
 the program will grab the new version, replace itself, and exec it.
 
-Note that since only symmetric encryption is used, if someone bad gets
-a copy of the unencrypted `your-admin-code`, that someone has access
-to the key and can impersonate the server to that client or any other
-that shares the same key.  I plan on adding signing with a public key.
-
-Goadmin also tracks serial numbers of executables, to get around
-replay attacks (i.e. where someone presents an old, possibly buggy
-version of an admin executable).
+Goadmin uses symmetric encryption to ensure that only authorized
+clients can read the admin program, and an RSA signature to ensure
+that only the server can provide a valid admin program.  Goadmin also
+adds a serial number to each executable, so they will only update with
+a later version, to get around replay attacks (e.g. where someone
+provides an old, possibly buggy version of an admin executable).
 
 Why?
 ----
