@@ -50,6 +50,7 @@ func Compile(outname string, files []string) (e os.Error) {
 var createcodeonce sync.Once
 var imports = make(chan string)
 var code = make(chan string)
+var declare = make(chan string)
 var done = make(chan string)
 var errr = make(chan os.Error)
 
@@ -58,12 +59,15 @@ func init() {
 		imps := make(map[string]bool)
 		imps["github.com/droundy/goadmin/deps"] = true
 		allcode := ""
+		declarations := make(map[string]bool)
 		for {
 			select {
 			case i := <- imports:
 				imps[i] = true
 			case c := <- code:
 				allcode = allcode + "\n\t" + c
+			case d := <- declare:
+				declarations[d] = true
 			case varname := <- done:
 				_,e := fmt.Print(`package main
 
@@ -90,6 +94,14 @@ var `, varname, ` = deps.Run(func () (e deps.Error) {`)
 					errr <- e
 					return
 				}
+				for d := range declarations {
+					_, e = fmt.Print("\t", d, "\n")
+					if e != nil {
+						fmt.Println(e)
+						errr <- e
+						return
+					}
+				}
 				_, e = fmt.Println(allcode)
 				if e != nil {
 					fmt.Println(e)
@@ -111,6 +123,10 @@ var `, varname, ` = deps.Run(func () (e deps.Error) {`)
 
 func Import(i string) {
 	imports <- i
+}
+
+func Declare(c string) {
+	declare <- c
 }
 
 func Code(c string) {
