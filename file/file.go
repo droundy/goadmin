@@ -35,11 +35,11 @@ func (f Data) Set(which Field) (needswriting bool, e os.Error) {
 			if e != nil { return false, e }
 		case syscall.S_IFREG:
 			// Just an ordinary file.
-			if Perms & which != 0 && uint32(stat.Permission()) != f.Perms {
+			if Perms & which != 0 && stat.Permission() != f.Perms {
 				e = os.Chmod(f.Name, f.Perms)
 				if e != nil { return false, e }
 			} else {
-				f.Perms = uint32(stat.Permission())
+				f.Perms = stat.Permission()
 			}
 			// Set the ownership if needed...
 			if Gid & which == 0 { f.Gid = stat.Gid }
@@ -81,7 +81,7 @@ func Stat(n string) (f Data, e os.Error) {
 	stat, e := os.Lstat(f.Name)
 	if e != nil { return }
 	if !stat.IsRegular() { return f, os.NewError("Bad stuff....") }
-	f.Perms = uint32(stat.Permission())
+	f.Perms = stat.Permission()
 	f.Uid = stat.Uid
 	f.Gid = stat.Gid
 	return
