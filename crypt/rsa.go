@@ -62,12 +62,9 @@ func readPublicKey(x PublicKey) (*rsa.PublicKey, os.Error) {
 }
 
 func sign(key *rsa.PrivateKey, sha256hash []byte) ([]byte, os.Error) {
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, rsa.HashSHA256, sha256hash)
-	fmt.Fprintln(os.Stderr, "Length of sig is", len(sig))
-	return sig, err
+	return rsa.SignPKCS1v15(rand.Reader, key, rsa.HashSHA256, sha256hash)
 }
 
 func verify(pub *rsa.PublicKey, sha256hash, sig []byte) os.Error {
-	fmt.Fprintln(os.Stderr, "Length of sig is", len(sig))
 	return rsa.VerifyPKCS1v15(pub, rsa.HashSHA256, sha256hash, sig)
 }
