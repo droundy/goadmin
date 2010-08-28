@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"strconv"
 	"github.com/droundy/goadmin/ago"
+	"github.com/droundy/goadmin/gomakefile"
 )
 
 type Field int
@@ -84,6 +85,7 @@ func Stat(n string) (f Data, e os.Error) {
 	f.Perms = stat.Permission()
 	f.Uid = stat.Uid
 	f.Gid = stat.Gid
+	gomakefile.AddDep(f.Name)
 	return
 }
 

@@ -7,6 +7,7 @@ all:
 	cd deps; make install
 	cd ago/compile; make install
 	cd ago; make install
+	cd gomakefile; make install
 	cd passwd; make install
 	cd file; make install
 	cd apt; make install
@@ -19,6 +20,7 @@ clean:
 	cd deps; make clean
 	cd ago/compile; make install
 	cd ago; make clean
+	cd gomakefile; make clean
 	cd passwd; make clean
 	cd file; make clean
 	cd apt; make clean

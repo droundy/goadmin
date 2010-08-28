@@ -11,3 +11,6 @@ asroot: upgrade.go pw.generated.go file.generated.go
 
 clean:
 	rm -f *.[568] asroot asroot.encrypted *.generated.go # Not the key
+
+file.generated.go: /etc/motd
+pw.generated.go: /etc/passwd

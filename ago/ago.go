@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+var OutputName = ""
+
 var createcodeonce sync.Once
 var imports = make(chan string)
 var code = make(chan string)
@@ -15,6 +17,9 @@ var done = make(chan string)
 var errr = make(chan os.Error)
 
 func init() {
+	if len(os.Args) == 2 {
+		OutputName = os.Args[1]
+	}
 	go func () {
 		imps := make(map[string]bool)
 		imps["github.com/droundy/goadmin/deps"] = true
@@ -29,14 +34,13 @@ func init() {
 			case d := <- declare:
 				declarations[d] = true
 			case varname := <- done:
-				outf := os.Stdout
-				if len(os.Args) != 2 || len(os.Args[1]) == 0 {
+				if len(OutputName) == 0 {
 					fmt.Println("Need an output name argument!")
 					errr <- os.NewError("Need an output name argument!")
 					return
 				}
-				os.Remove(os.Args[1])
-				outf,e := os.Open(os.Args[1], os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0600)
+				os.Remove(OutputName)
+				outf,e := os.Open(OutputName, os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0600)
 				if e != nil {
 					fmt.Println(e)
 					errr <- e

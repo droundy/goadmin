@@ -9,6 +9,7 @@ import (
 	"sync"
 	"strconv"
 	"github.com/droundy/goadmin/ago"
+	"github.com/droundy/goadmin/gomakefile"
 )
 
 type Field int
@@ -37,6 +38,7 @@ func Get() map[string]User {
 	once.Do(func () {
 		x, e := ioutil.ReadFile("/etc/passwd")
 		if e == nil {
+			gomakefile.AddDep("/etc/passwd")
 			pwent := "([^:\n]+):([^:]+):([0-9]+):([0-9]+):([^:]*):([^:]+):([^:]+)\n"
 			matches := regexp.MustCompile(pwent).FindAllSubmatch(x, -1)
 			for _,match := range matches {
@@ -59,6 +61,7 @@ func Get() map[string]User {
 			}
 			x, e = ioutil.ReadFile("/etc/shadow")
 			if e == nil {
+				gomakefile.AddDep("/etc/shadow")
 				pwent := "([^:\n]+):([^:]+):[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*:[^:]*\n"
 				matches := regexp.MustCompile(pwent).FindAllSubmatch(x, -1)
 				for _,match := range matches {
