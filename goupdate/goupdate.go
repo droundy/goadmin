@@ -7,7 +7,7 @@ import (
 	"io"
 	"io/ioutil"
   "strconv"
-	"github.com/droundy/goadmin/ago"
+	"github.com/droundy/goadmin/ago/compile"
 	"github.com/droundy/goadmin/crypt"
 	"github.com/droundy/goopt"
 )
@@ -43,7 +43,7 @@ func main() {
 	}
 	fs[len(goopt.Args)] = "testing.go"
 	makeSource("testing.go")
-	e := ago.Compile(*outname, fs)
+	e := compile.Compile(*outname, fs)
 	if e != nil {
 		fmt.Println(e)
 		os.Exit(1)

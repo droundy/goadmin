@@ -5,47 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
-	"syscall"
-	"github.com/droundy/goadmin/deps"
 )
-
-func panicon(err os.Error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func archnum() string {
-	switch os.Getenv("GOARCH") {
-	case "386": return "8"
-	case "amd64": return "6"
-		// what was the other one called?
-	}
-	return "5"
-}
-
-func Compile(outname string, files []string) (e os.Error) {
-	oldmask := syscall.Umask(0)
-	syscall.Umask(0077) // Turn off read/write/execute priviledges for others
-	if len(files) < 1 {
-		return os.NewError("go.Compile requires at least one file argument.");
-	}
-	objname := "_go_."+archnum()
-	os.Remove(objname) // so umask will have its desired effect
-
-	args := make([]string, len(files) + 2)
-	args[0] = "-o"
-	args[1] = objname
-	for i,f := range files {
-		args[i+2] = f
-	}
-	e = deps.Execs(archnum()+"g", args)
-	if e != nil { return }
-	os.Remove(outname) // so umask will have its desired effect
-	retval := deps.Exec(archnum()+"l", "-o", outname, objname)
-	syscall.Umask(oldmask)
-	return retval
-}
 
 var createcodeonce sync.Once
 var imports = make(chan string)
@@ -69,7 +29,20 @@ func init() {
 			case d := <- declare:
 				declarations[d] = true
 			case varname := <- done:
-				_,e := fmt.Print(`package main
+				outf := os.Stdout
+				if len(os.Args) != 2 || len(os.Args[1]) == 0 {
+					fmt.Println("Need an output name argument!")
+					errr <- os.NewError("Need an output name argument!")
+					return
+				}
+				os.Remove(os.Args[1])
+				outf,e := os.Open(os.Args[1], os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0600)
+				if e != nil {
+					fmt.Println(e)
+					errr <- e
+					return
+				}
+				_,e = fmt.Fprint(outf, `package main
 
 import (
 `)
@@ -79,14 +52,14 @@ import (
 					return
 				}
 				for i := range imps {
-					_, e = fmt.Print("\t", strconv.Quote(i), "\n")
+					_, e = fmt.Fprint(outf, "\t", strconv.Quote(i), "\n")
 					if e != nil {
 						fmt.Println(e)
 						errr <- e
 						return
 					}
 				}
-				_, e = fmt.Print(`)
+				_, e = fmt.Fprint(outf, `)
 
 var `, varname, ` = deps.Run(func () (e deps.Error) {`)
 				if e != nil {
@@ -95,20 +68,20 @@ var `, varname, ` = deps.Run(func () (e deps.Error) {`)
 					return
 				}
 				for d := range declarations {
-					_, e = fmt.Print("\t", d, "\n")
+					_, e = fmt.Fprint(outf, "\t", d, "\n")
 					if e != nil {
 						fmt.Println(e)
 						errr <- e
 						return
 					}
 				}
-				_, e = fmt.Println(allcode)
+				_, e = fmt.Fprintln(outf, allcode)
 				if e != nil {
 					fmt.Println(e)
 					errr <- e
 					return
 				}
-				_, e = fmt.Println("\treturn\n})")
+				_, e = fmt.Fprintln(outf, "\treturn\n})")
 				if e != nil {
 					fmt.Println(e)
 					errr <- e

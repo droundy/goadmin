@@ -5,6 +5,7 @@ all:
 	goinstall github.com/droundy/goopt
 	cd crypt; make install
 	cd deps; make install
+	cd ago/compile; make install
 	cd ago; make install
 	cd passwd; make install
 	cd file; make install
@@ -16,6 +17,7 @@ all:
 clean:
 	cd crypt; make clean
 	cd deps; make clean
+	cd ago/compile; make install
 	cd ago; make clean
 	cd passwd; make clean
 	cd file; make clean
