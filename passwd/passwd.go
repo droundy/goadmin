@@ -78,7 +78,7 @@ func Get() map[string]User {
 	return passwd
 }
 
-func (u User) MakeCodeToSet(f Field) {
+func (u User) GoSet(f Field) {
 	if !havepasswords && f & Passwd != 0 {
 		fmt.Fprintln(os.Stderr, "Refusing to set password for",u.Name,", since we can't read /etc/shadow!")
 		f = f ^ Passwd // Don't set password if we can't read /etc/shadow!

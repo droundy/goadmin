@@ -9,7 +9,7 @@ func main() {
 	// Want all machines to have myself and guest (and have the
 	// passwords copied over, if this is run as root, so the passwords
 	// are available from shadow).
-	passwd.Get()["droundy"].MakeCodeToSet(passwd.All)
-	passwd.Get()["guest"].MakeCodeToSet(passwd.All)
+	passwd.Get()["droundy"].GoSet(passwd.All)
+	passwd.Get()["guest"].GoSet(passwd.All)
 	ago.Print("droundy")
 }

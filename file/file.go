@@ -95,7 +95,7 @@ func Read(n string) (f Data, e os.Error) {
 	return
 }
 
-func (f Data) MakeCodeToSet(which Field) {
+func (f Data) GoSet(which Field) {
 	if which == 0 { return } // Nothing to set!
 	ago.Import("github.com/droundy/goadmin/file")
 	ago.Declare("var changed_files = make(map[string]bool)")
