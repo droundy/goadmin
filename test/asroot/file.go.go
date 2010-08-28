@@ -11,7 +11,7 @@ func main() {
 	// Want all machines to have the same /etc/motd
 	motd,_ := file.Read("/etc/motd")
 	motd.GoSet(file.All)
-	file.Data{"/tmp/test-from-asroot", "Some demo contents\n", 0, 0, 0666}.GoSet(file.All)
+	file.File{file.StatData{"/tmp/test-from-asroot", 0, 0, 0666, file.IsFile}, "Some demo contents\n"}.GoSet(file.All)
 	ago.Code(`if file_changed { fmt.Println("I changed a file!") }`)
 	ago.Print("files")
 }
