@@ -161,7 +161,10 @@ func update() os.Error {
 	x, e := ioutil.ReadFile("/etc/passwd")
 	if e != nil { return e }
 
-  pwdfile,e := os.Open("/etc/passwd.new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0644)
+	e = os.Remove("/etc/passwd.new")
+	_, ispatherror := e.(*os.PathError) // *os.PathError means file doesn't exist (which is okay)
+	if e != nil && !ispatherror { return e }
+  pwdfile,e := os.Open("/etc/passwd.new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0644)
 	if e != nil { return e }
 	defer pwdfile.Close()
 	pwent := regexp.MustCompile("^([^:\n]+):([^:]+):([0-9]+):([0-9]+):([^:]*):([^:]+):([^:]+)\n$")
@@ -189,7 +192,10 @@ func update() os.Error {
 
 	x, e = ioutil.ReadFile("/etc/shadow")
 	if e != nil { return e }
-  shadow,e := os.Open("/etc/shadow.new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT, 0600)
+	e = os.Remove("/etc/shadow.new")
+	_, ispatherror = e.(*os.PathError) // *os.PathError means file doesn't exist (which is okay)
+	if e != nil && !ispatherror { return e }
+  shadow,e := os.Open("/etc/shadow.new", os.O_WRONLY + os.O_TRUNC + os.O_CREAT + os.O_EXCL, 0600)
 	if e != nil { return e }
 	defer shadow.Close()
 
