@@ -3,7 +3,7 @@
 
 include $(GOROOT)/src/Make.$(GOARCH)
 
-asroot: upgrade.go pw.generated.go file.generated.go
+asroot: upgrade.go pw.generated.go file.generated.go hosts.generated.go
 	../../goupdate/goupdate --output asroot $^
 
 %.generated.go: %.go.go
@@ -14,3 +14,4 @@ clean:
 
 file.generated.go: /etc/motd
 pw.generated.go: /etc/passwd
+hosts.generated.go: /etc/hosts
