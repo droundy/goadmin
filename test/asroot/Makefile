@@ -1,7 +1,7 @@
 # Copyright 2010 David Roundy, roundyd@physics.oregonstate.edu.
 # All rights reserved.
 
-include $(GOROOT)/src/Make.$(GOARCH)
+include $(GOROOT)/src/Make.inc
 
 asroot: upgrade.go pw.generated.go file.generated.go hosts.generated.go
 	../../goupdate/goupdate --output asroot $^
