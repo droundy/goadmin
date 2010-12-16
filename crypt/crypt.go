@@ -7,7 +7,7 @@ import (
 	"hash"
 	"encoding/binary"
 	"compress/flate"
-	"crypto/block"
+	"crypto/cipher"
 	"crypto/aes"
 	"crypto/rand"
 	"crypto/sha256"
@@ -86,13 +86,14 @@ func Decrypt(key string, publickey PublicKey, rin io.Reader) (r io.Reader, lengt
 		e = os.NewError("Trouble reading the public key: "+e.String())
 		return
 	}
-	iv := make([]byte, 16)
+	iv := make([]byte, c.BlockSize())
 	_, e = io.ReadFull(rin, iv) // read the iv first (it's not encrypted)
 	if e != nil {
 		e = os.NewError("Trouble reading the iv: "+e.String())
 		return
 	}
-	rdec := flate.NewReader(block.NewCBCDecrypter(c, iv, rin))
+	decrypter := cipher.NewCFBDecrypter(c, iv)
+	rdec := flate.NewReader(cipher.StreamReader{decrypter, rin})
 	e = binary.Read(rdec, binary.LittleEndian, &length)
 	if e != nil {
 		e = os.NewError("Trouble reading the file length: "+e.String())
@@ -126,12 +127,6 @@ func (hw *hashWriter) Write(data []byte) (written int, e os.Error) {
 		binary.Write(hw.w, binary.LittleEndian, int32(len(sig)))
 		hw.w.Write(sig)
 		hw.w.Close() // Push everything through to the cipher!
-
-		// Here we send another block worth of data through the cipher to
-		// force it to flush what it's already got.  I'd prefer to just
-		// send a Flush() or a Close(), though.
-		buffer := make([]byte, 16)
-		hw.cipher.Write(buffer)
 	}
 	return
 }
@@ -141,14 +136,14 @@ func Encrypt(key string, privatekey PrivateKey, win io.Writer, length, sequence 
 	if e != nil { return }
 	priv, e := readRSAKey(privatekey)
 	if e != nil { return }
-	iv := make([]byte, 16)
+	iv := make([]byte, c.BlockSize())
 	_,e = rand.Read(iv)
 	if e != nil {
 		return
 	}
 	_,e = win.Write(iv) // pass the iv across first
 	if e != nil { return }
-	wraw := block.NewCBCEncrypter(c, iv, win)
+	wraw := cipher.StreamWriter{ cipher.NewCFBEncrypter(c, iv), win, nil }
 	wenc := flate.NewWriter(wraw, flate.BestCompression)
 	e = binary.Write(wenc, binary.LittleEndian, length)
 	if e != nil { return }
@@ -157,7 +152,7 @@ func Encrypt(key string, privatekey PrivateKey, win io.Writer, length, sequence 
 	return &hashWriter{wenc, wraw, sha256.New(), priv, length}, nil
 }
 
-func simpleCipher(key string) (block.Cipher, os.Error) {
+func simpleCipher(key string) (cipher.Block, os.Error) {
 	var k []byte
 	// pad the key (or truncate it) so it's the right size.
 	if len(key) > 24 {
